@@ -36,22 +36,37 @@ with st.sidebar:
     rent_pct = st.slider("Rent (%)", 10, 25, 15, 1)
     other_opex_pct = st.slider("Other OpEx (%)", 5, 20, 10, 1)
 
-def calculate_irr(cash_flows, max_iterations=1000, tolerance=0.00001):
-    """Calculate IRR using Newton-Raphson method"""
-    if not cash_flows or len(cash_flows) < 2:
+def calculate_irr(cash_flows):
+    """Calculate IRR - simple and reliable"""
+    if len(cash_flows) < 2:
         return 0.0
     
-    # Check if there's any positive cash flow
-    if sum(cash_flows[1:]) <= 0:
-        return 0.0
+    # Quick check - if total cash flow is negative, IRR will be negative
+    if sum(cash_flows) <= 0:
+        return -99.9
     
-    rate = 0.1  # Initial guess
-    
-    for i in range(max_iterations):
-        npv = sum(cf / ((1 + rate) ** t) for t, cf in enumerate(cash_flows))
+    # Newton's method
+    rate = 0.1
+    for _ in range(100):
+        npv = 0
+        npv_deriv = 0
         
-        if abs(npv) < tolerance:
+        for t, cf in enumerate(cash_flows):
+            npv += cf / pow(1 + rate, t)
+            npv_deriv -= t * cf / pow(1 + rate, t + 1)
+        
+        if abs(npv) < 0.01:
             return round(rate * 100, 2)
+        
+        if abs(npv_deriv) < 0.000001:
+            return 0.0
+        
+        rate = rate - npv / npv_deriv
+        
+        if rate < -0.99 or rate > 5:
+            return 0.0
+    
+    return round(rate * 100, 2)
         
         dnpv = sum(-t * cf / ((1 + rate) ** (t + 1)) for t, cf in enumerate(cash_flows))
         
