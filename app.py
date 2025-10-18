@@ -247,4 +247,4 @@ with tab4:
         st.download_button(
             label="📄 Download Base Case CSV",
             data=csv,
-            file_name="coffee_
+            file_name="coffee_shop_base_case.csv"
