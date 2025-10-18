@@ -19,25 +19,25 @@ with st.sidebar:
     st.header("📊 Model Assumptions")
     
     st.subheader("Purchase & Financing")
-    purchase_price = st.slider("Purchase Price ($)", 500000, 1000000, 750000, 10000)
-    down_payment_pct = st.slider("Down Payment (%)", 10, 40, 20, 5)
-    interest_rate = st.slider("Interest Rate (%)", 4.0, 12.0, 7.0, 0.5)
+    purchase_price = st.slider("Purchase Price ($)", 300000, 800000, 450000, 10000)
+    down_payment_pct = st.slider("Down Payment (%)", 10, 40, 25, 5)
+    interest_rate = st.slider("Interest Rate (%)", 4.0, 12.0, 6.5, 0.5)
     loan_term = st.slider("Loan Term (years)", 5, 15, 7, 1)
     
     st.subheader("Revenue & Growth")
-    current_revenue = st.slider("Current Annual Revenue ($)", 300000, 800000, 500000, 10000)
-    base_growth = st.slider("Base Case Growth (%)", 0.0, 15.0, 5.0, 0.5)
-    optimistic_growth = st.slider("Optimistic Growth (%)", 5.0, 20.0, 8.0, 0.5)
-    pessimistic_growth = st.slider("Pessimistic Growth (%)", 0.0, 10.0, 2.0, 0.5)
+    current_revenue = st.slider("Current Annual Revenue ($)", 400000, 900000, 650000, 10000)
+    base_growth = st.slider("Base Case Growth (%)", 0.0, 15.0, 6.0, 0.5)
+    optimistic_growth = st.slider("Optimistic Growth (%)", 5.0, 20.0, 10.0, 0.5)
+    pessimistic_growth = st.slider("Pessimistic Growth (%)", 0.0, 10.0, 3.0, 0.5)
     
     st.subheader("Operating Expenses (% of Revenue)")
-    cogs_pct = st.slider("COGS (%)", 25, 45, 35, 1)
-    labor_pct = st.slider("Labor (%)", 20, 40, 30, 1)
-    rent_pct = st.slider("Rent (%)", 10, 25, 15, 1)
-    other_opex_pct = st.slider("Other OpEx (%)", 5, 20, 10, 1)
+    cogs_pct = st.slider("COGS (%)", 25, 45, 32, 1)
+    labor_pct = st.slider("Labor (%)", 20, 40, 26, 1)
+    rent_pct = st.slider("Rent (%)", 10, 25, 12, 1)
+    other_opex_pct = st.slider("Other OpEx (%)", 5, 20, 8, 1)
 
 def calculate_irr(cashflows):
-    if len(cashflows) < 2 or sum(cashflows) <= 0:
+    if len(cashflows) < 2:
         return 0.0
     x = 0.1
     for i in range(100):
@@ -46,10 +46,12 @@ def calculate_irr(cashflows):
             return round(x * 100, 2)
         dfx = sum(-t * cf / ((1 + x) ** (t + 1)) for t, cf in enumerate(cashflows))
         if abs(dfx) < 0.000001:
-            return 0.0
+            break
         x = x - fx / dfx
-        if x < -0.99 or x > 5:
-            return 0.0
+        if x < -0.99:
+            x = -0.99
+        if x > 5:
+            break
     return round(x * 100, 2)
 
 def calculate_scenario(growth_rate):
