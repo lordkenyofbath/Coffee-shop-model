@@ -248,3 +248,5 @@ with tab4:
             label="📄 Download Base Case CSV",
             data=csv,
             file_name="coffee_shop_base_case.csv"
+mime="text/csv"
+)
