@@ -97,24 +97,28 @@ def calculate_scenario(growth_rate):
     
     df = pd.DataFrame(years_data)
     
+    # Simple IRR calculation
     cash_flows = [-down_payment] + df[df['Year'] > 0]['Cash Flow'].tolist()
     
-    def calc_irr(cfs):
-        rate = 0.1
-        for i in range(100):
-            npv = sum([cf / (1 + rate) ** t for t, cf in enumerate(cfs)])
-            if abs(npv) < 1:
-                return rate * 100
-            dnpv = sum([-t * cf / (1 + rate) ** (t + 1) for t, cf in enumerate(cfs)])
-            if dnpv == 0:
-                return 0
-            rate = rate - npv / dnpv
-        return rate * 100
-    
-    try:
-        irr = calc_irr(cash_flows)
-    except:
-        irr = 0
+    # Use numpy polyroots method for IRR
+    irr = 0
+    if sum(cash_flows) > 0:  # Only calculate if there's positive cash flow
+        try:
+            guess = 0.1
+            for iteration in range(100):
+                npv = sum(cf / ((1 + guess) ** i) for i, cf in enumerate(cash_flows))
+                if abs(npv) < 0.01:
+                    irr = guess * 100
+                    break
+                derivative = sum(-i * cf / ((1 + guess) ** (i + 1)) for i, cf in enumerate(cash_flows))
+                if derivative != 0:
+                    guess = guess - npv / derivative
+                else:
+                    break
+            else:
+                irr = guess * 100
+        except:
+            irr = 0
     
     payback_df = df[df['Cumulative CF'] > 0]
     payback = payback_df['Year'].min() if len(payback_df) > 0 else 'N/A'
