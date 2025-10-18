@@ -1,11 +1,9 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.graph_objects as go
 
 st.set_page_config(page_title="Coffee Shop Acquisition Model", layout="wide", page_icon="☕")
 
-# Custom CSS
 st.markdown("""
     <style>
     .main {padding: 2rem;}
@@ -13,23 +11,21 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# Header
 st.title("☕ Coffee Shop Acquisition Financial Model")
 st.markdown("**Interactive analysis for multi-location retail acquisition**")
 st.divider()
 
-# Sidebar inputs
 with st.sidebar:
     st.header("📊 Model Assumptions")
     
     st.subheader("Purchase & Financing")
-    purchase_price = st.slider("Purchase Price ($)", 500000, 1000000, 750000, 10000, format="$%d")
+    purchase_price = st.slider("Purchase Price ($)", 500000, 1000000, 750000, 10000)
     down_payment_pct = st.slider("Down Payment (%)", 10, 40, 20, 5)
     interest_rate = st.slider("Interest Rate (%)", 4.0, 12.0, 7.0, 0.5)
     loan_term = st.slider("Loan Term (years)", 5, 15, 7, 1)
     
     st.subheader("Revenue & Growth")
-    current_revenue = st.slider("Current Annual Revenue ($)", 300000, 800000, 500000, 10000, format="$%d")
+    current_revenue = st.slider("Current Annual Revenue ($)", 300000, 800000, 500000, 10000)
     base_growth = st.slider("Base Case Growth (%)", 0.0, 15.0, 5.0, 0.5)
     optimistic_growth = st.slider("Optimistic Growth (%)", 5.0, 20.0, 8.0, 0.5)
     pessimistic_growth = st.slider("Pessimistic Growth (%)", 0.0, 10.0, 2.0, 0.5)
@@ -40,8 +36,45 @@ with st.sidebar:
     rent_pct = st.slider("Rent (%)", 10, 25, 15, 1)
     other_opex_pct = st.slider("Other OpEx (%)", 5, 20, 10, 1)
 
+def calculate_irr(cash_flows, max_iterations=1000, tolerance=0.00001):
+    """Calculate IRR using Newton-Raphson method"""
+    if not cash_flows or len(cash_flows) < 2:
+        return 0.0
+    
+    # Check if there's any positive cash flow
+    if sum(cash_flows[1:]) <= 0:
+        return 0.0
+    
+    rate = 0.1  # Initial guess
+    
+    for i in range(max_iterations):
+        npv = sum(cf / ((1 + rate) ** t) for t, cf in enumerate(cash_flows))
+        
+        if abs(npv) < tolerance:
+            return round(rate * 100, 2)
+        
+        dnpv = sum(-t * cf / ((1 + rate) ** (t + 1)) for t, cf in enumerate(cash_flows))
+        
+        if abs(dnpv) < tolerance:
+            return 0.0
+        
+        new_rate = rate - npv / dnpv
+        
+        # Keep rate reasonable
+        if new_rate < -0.99:
+            new_rate = -0.99
+        elif new_rate > 10:
+            new_rate = 10
+        
+        if abs(new_rate - rate) < tolerance:
+            return round(new_rate * 100, 2)
+        
+        rate = new_rate
+    
+    return round(rate * 100, 2)
+
 def calculate_scenario(growth_rate):
-    """Calculate financial projections for a given growth scenario"""
+    """Calculate financial projections"""
     down_payment = purchase_price * (down_payment_pct / 100)
     loan_amount = purchase_price - down_payment
     monthly_rate = interest_rate / 100 / 12
@@ -97,61 +130,43 @@ def calculate_scenario(growth_rate):
     
     df = pd.DataFrame(years_data)
     
-    # Simple IRR calculation
+    # Calculate IRR
     cash_flows = [-down_payment] + df[df['Year'] > 0]['Cash Flow'].tolist()
+    irr = calculate_irr(cash_flows)
     
-    # Use numpy polyroots method for IRR
-    irr = 0
-    if sum(cash_flows) > 0:  # Only calculate if there's positive cash flow
-        try:
-            guess = 0.1
-            for iteration in range(100):
-                npv = sum(cf / ((1 + guess) ** i) for i, cf in enumerate(cash_flows))
-                if abs(npv) < 0.01:
-                    irr = guess * 100
-                    break
-                derivative = sum(-i * cf / ((1 + guess) ** (i + 1)) for i, cf in enumerate(cash_flows))
-                if derivative != 0:
-                    guess = guess - npv / derivative
-                else:
-                    break
-            else:
-                irr = guess * 100
-        except:
-            irr = 0
-    
+    # Calculate payback
     payback_df = df[df['Cumulative CF'] > 0]
-    payback = payback_df['Year'].min() if len(payback_df) > 0 else 'N/A'
+    payback = int(payback_df['Year'].min()) if len(payback_df) > 0 else None
     
     return df, irr, payback, down_payment, annual_debt_service
 
-# Calculate all scenarios
+# Calculate scenarios
 pessimistic_df, pessimistic_irr, pessimistic_payback, down_payment, debt_service = calculate_scenario(pessimistic_growth)
 base_df, base_irr, base_payback, _, _ = calculate_scenario(base_growth)
 optimistic_df, optimistic_irr, optimistic_payback, _, _ = calculate_scenario(optimistic_growth)
 
-# Key Metrics Display
+# Display metrics
 st.subheader("📈 Key Performance Indicators")
 col1, col2, col3 = st.columns(3)
 
 with col1:
     st.markdown("### 🔴 Pessimistic")
-    st.metric("IRR", f"{pessimistic_irr:.2f}%")
-    st.metric("Payback", f"Year {pessimistic_payback}" if pessimistic_payback != 'N/A' else 'N/A')
+    st.metric("IRR", f"{pessimistic_irr}%")
+    st.metric("Payback", f"Year {pessimistic_payback}" if pessimistic_payback else "N/A")
 
 with col2:
     st.markdown("### 🔵 Base Case")
-    st.metric("IRR", f"{base_irr:.2f}%")
-    st.metric("Payback", f"Year {base_payback}" if base_payback != 'N/A' else 'N/A')
+    st.metric("IRR", f"{base_irr}%")
+    st.metric("Payback", f"Year {base_payback}" if base_payback else "N/A")
 
 with col3:
     st.markdown("### 🟢 Optimistic")
-    st.metric("IRR", f"{optimistic_irr:.2f}%")
-    st.metric("Payback", f"Year {optimistic_payback}" if optimistic_payback != 'N/A' else 'N/A')
+    st.metric("IRR", f"{optimistic_irr}%")
+    st.metric("Payback", f"Year {optimistic_payback}" if optimistic_payback else "N/A")
 
 st.divider()
 
-# Visualization Tabs
+# Tabs
 tab1, tab2, tab3, tab4 = st.tabs(["📊 Revenue", "💰 Cash Flow", "📋 Tables", "📥 Export"])
 
 with tab1:
@@ -207,7 +222,6 @@ with tab2:
     )
     st.plotly_chart(fig, use_container_width=True)
     
-    # Cumulative cash flow
     st.subheader("Cumulative Cash Flow")
     fig2 = go.Figure()
     
@@ -241,7 +255,6 @@ with tab3:
     
     st.subheader(f"{scenario_choice} - Detailed Projections")
     
-    # Format currency columns
     currency_cols = ['Revenue', 'COGS', 'Labor', 'Rent', 'Other OpEx', 'EBITDA', 'Debt Service', 'Cash Flow', 'Cumulative CF']
     formatted_df = display_df.copy()
     for col in currency_cols:
@@ -256,11 +269,50 @@ with tab4:
     col1, col2 = st.columns(2)
     
     with col1:
-        # CSV Export
         csv = base_df.to_csv(index=False)
         st.download_button(
             label="📄 Download Base Case CSV",
             data=csv,
             file_name="coffee_shop_base_case.csv",
- mime="text/csv"
-)
+            mime="text/csv"
+        )
+    
+    with col2:
+        summary_data = {
+            'Metric': ['Purchase Price', 'Down Payment', 'Loan Amount', 'Interest Rate', 'Loan Term', 
+                       'Pessimistic IRR', 'Base IRR', 'Optimistic IRR'],
+            'Value': [f"${purchase_price:,}", f"${down_payment:,.0f}", f"${purchase_price - down_payment:,}",
+                     f"{interest_rate}%", f"{loan_term} years",
+                     f"{pessimistic_irr}%", f"{base_irr}%", f"{optimistic_irr}%"]
+        }
+        summary_df = pd.DataFrame(summary_data)
+        csv_summary = summary_df.to_csv(index=False)
+        st.download_button(
+            label="📊 Download Summary",
+            data=csv_summary,
+            file_name="investment_summary.csv",
+            mime="text/csv"
+        )
+
+st.divider()
+st.subheader("💼 Investment Summary")
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Purchase Price", f"${purchase_price:,}")
+col2.metric("Down Payment", f"${down_payment:,.0f}")
+col3.metric("Loan Amount", f"${purchase_price - down_payment:,}")
+col4.metric("Annual Debt Service", f"${debt_service:,.0f}")
+
+st.divider()
+st.markdown("""
+    <div style='text-align: center; color: #666;'>
+        <p><strong>Built with Python + Streamlit</strong> | Financial Modeling Portfolio Project</p>
+        <p style='font-size: 0.9em;'>Adjust assumptions in the sidebar to see real-time updates</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+          
+    
+    
+   
+      
