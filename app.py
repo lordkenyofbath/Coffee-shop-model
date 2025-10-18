@@ -19,16 +19,16 @@ with st.sidebar:
     st.header("📊 Model Assumptions")
     
     st.subheader("Purchase & Financing")
-    purchase_price = st.slider("Purchase Price ($)", 300000, 800000, 450000, 10000)
-    down_payment_pct = st.slider("Down Payment (%)", 10, 40, 25, 5)
-    interest_rate = st.slider("Interest Rate (%)", 4.0, 12.0, 6.5, 0.5)
+    purchase_price = st.slider("Purchase Price ($)", 500000, 1000000, 675000, 10000)
+    down_payment_pct = st.slider("Down Payment (%)", 10, 40, 20, 5)
+    interest_rate = st.slider("Interest Rate (%)", 4.0, 12.0, 7.0, 0.5)
     loan_term = st.slider("Loan Term (years)", 5, 15, 7, 1)
     
     st.subheader("Revenue & Growth")
     current_revenue = st.slider("Current Annual Revenue ($)", 400000, 900000, 650000, 10000)
-    base_growth = st.slider("Base Case Growth (%)", 0.0, 15.0, 6.0, 0.5)
-    optimistic_growth = st.slider("Optimistic Growth (%)", 5.0, 20.0, 10.0, 0.5)
-    pessimistic_growth = st.slider("Pessimistic Growth (%)", 0.0, 10.0, 3.0, 0.5)
+    base_growth = st.slider("Base Case Growth (%)", 0.0, 15.0, 5.0, 0.5)
+    optimistic_growth = st.slider("Optimistic Growth (%)", 5.0, 20.0, 8.0, 0.5)
+    pessimistic_growth = st.slider("Pessimistic Growth (%)", 0.0, 10.0, 2.0, 0.5)
     
     st.subheader("Operating Expenses (% of Revenue)")
     cogs_pct = st.slider("COGS (%)", 25, 45, 32, 1)
@@ -191,5 +191,4 @@ col3.metric("Loan Amount", f"${purchase_price - down_payment:,}")
 col4.metric("Annual Debt Service", f"${debt_service:,.0f}")
 
 st.divider()
-st.markdown("""<div style='text-align: center; color: #666;'><p><strong>Built with Python + Streamlit</strong> | Financial Modeling Portfolio Project</p><p style='font-size: 0.9em;'>Adjust assumptions in the sidebar to see real-time updates</p></div>""", unsafe_allow_html=True)
-      
+st.markdown("""<div style='text-align: center; color: #666;'><p><strong>Built with Python + Streamlit</strong> | Financial Modeling Portfolio Project</p><p style='font-size: 0.9em;'>Adjust assumptions in the sidebar to see real-time updates</p></div>""", unsafe_allow_html=True)   
